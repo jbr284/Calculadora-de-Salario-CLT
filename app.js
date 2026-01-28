@@ -1,15 +1,13 @@
-// app.js - VERSÃO FINAL FLEX 2026
+// app.js - VERSÃO FINAL APP PWA 2026
 
 // --- 1. REGRAS FIXAS (LEI 2026 - Oficial & Ajustado) ---
 const regrasFederais = {
     ano: 2026,
-    salarioMinimo: 1621.00, // Base Faixa 1
-    tetoINSS: 8475.55,      // Teto Oficial
+    salarioMinimo: 1621.00,
+    tetoINSS: 8475.55,
     deducaoDependente: 189.59,
-    descontoSimplificadoValor: 607.20, // Estimativa 2026 para IRRF
+    descontoSimplificadoValor: 607.20,
 
-    // Tabela INSS (Valores Matemáticos para Bater com Contabilidade)
-    // A dedução aqui é a parcela matemática que ajusta a progressividade
     tabelaINSS: [
         { ate: 1621.00, aliq: 0.075, ded: 0.00 },
         { ate: 2902.84, aliq: 0.090, ded: 24.32 },
@@ -17,7 +15,6 @@ const regrasFederais = {
         { ate: 8475.55, aliq: 0.140, ded: 198.49 }
     ],
     
-    // Tabela IRRF (Base de Cálculo)
     tabelaIRRF: [
         { ate: 2259.20, aliq: 0, ded: 0 },
         { ate: 2826.65, aliq: 0.075, ded: 169.44 },
@@ -63,11 +60,18 @@ const Format = {
     toBRL: (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 };
 
+// --- UI UTILS ---
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+
 // --- 3. MOTOR DE CÁLCULO ---
 function calcularSalario(inputs, perfil) {
     const { salario, diasTrab, dependentes, faltas, atrasos, he50, he60, he80, he100, he150, noturno, options } = inputs;
     
-    // Dias Úteis (Calendário)
     const diasUteis = inputs.diasUteis > 0 ? inputs.diasUteis : 25;
     const domFeriados = inputs.domFeriados >= 0 ? inputs.domFeriados : 5;
 
@@ -76,7 +80,7 @@ function calcularSalario(inputs, perfil) {
     const valorDia = salario / 30;
     const valorHora = salario / 220;
 
-    // --- PROVENTOS ---
+    // Proventos
     const vencBase = valorDia * diasEfetivos;
     const valorHE50 = he50 * valorHora * 1.5;
     const valorHE60 = he60 * valorHora * 1.6;
@@ -90,27 +94,24 @@ function calcularSalario(inputs, perfil) {
     const dsrHE = (totalHE / diasUteis) * domFeriados;
     const dsrNoturno = (valorNoturno / diasUteis) * domFeriados;
     
-    // Total Bruto (RENDIMENTOS TRIBUTÁVEIS)
-    // *Importante para a regra de isenção do IRRF*
+    // Rendimentos Totais (Base de Isenção IRRF)
     const totalBruto = vencBase + totalHE + valorNoturno + dsrHE + dsrNoturno;
 
-    // --- DESCONTOS ---
+    // Descontos
     const fgts = totalBruto * 0.08;
     const descFaltas = faltas * valorDia;
     const descAtrasos = atrasos * valorHora;
     const adiantamento = options.adiantamento ? ((salario / 30) * diasEfetivos * (cfg.adiantamento / 100)) : 0;
     
-    // Extras (Dinâmicos da Configuração)
+    // Extras
     let somaExtras = 0;
     const listaExtrasCalculados = [];
     if (cfg.descontosExtras && cfg.descontosExtras.length > 0) {
         cfg.descontosExtras.forEach(itemConfig => {
             let valorCalculado = 0;
             if (itemConfig.tipo === '%') {
-                // Percentual sobre Salário Contratual
                 valorCalculado = salario * (itemConfig.valor / 100);
             } else {
-                // Valor Fixo
                 valorCalculado = itemConfig.valor;
             }
             somaExtras += valorCalculado;
@@ -118,32 +119,26 @@ function calcularSalario(inputs, perfil) {
         });
     }
 
-    // --- INSS (CÁLCULO EXATO COM A TABELA MATEMÁTICA) ---
+    // INSS
     let baseINSS = totalBruto;
     if (baseINSS > regrasFederais.tetoINSS) baseINSS = regrasFederais.tetoINSS;
     let inss = 0;
-    
     for (const f of regrasFederais.tabelaINSS) {
         if (baseINSS <= f.ate) {
             inss = (baseINSS * f.aliq) - f.ded;
             break;
         }
     }
-    // Se estourar a última faixa (mas travado no teto)
     if (inss === 0 && baseINSS >= regrasFederais.tabelaINSS[3].ate) {
         const ult = regrasFederais.tabelaINSS[3];
         inss = (baseINSS * ult.aliq) - ult.ded;
     }
 
-    // --- IRRF 2026 (LEI 15.270) ---
-    // 1. Definição da Dedução (Legal ou Simplificado)
+    // IRRF 2026
     const deducoesLegais = inss + (dependentes * regrasFederais.deducaoDependente);
     const deducaoUtilizada = Math.max(deducoesLegais, regrasFederais.descontoSimplificadoValor);
-    
-    // 2. Base de Cálculo para a Tabela
     const baseIRRF = totalBruto - deducaoUtilizada;
     
-    // 3. Enquadramento na Tabela Progressiva (Cálculo Base)
     let irrfCalculado = 0;
     if (baseIRRF > 0) {
         for (const f of regrasFederais.tabelaIRRF) {
@@ -155,24 +150,14 @@ function calcularSalario(inputs, perfil) {
     }
     if (irrfCalculado < 0) irrfCalculado = 0;
 
-    // 4. Aplicação do REDUTOR 2026 (Baseado em RENDIMENTOS TRIBUTÁVEIS)
+    // Redutor 2026
     let irrfFinal = irrfCalculado;
-
-    // Regra A: Isenção se Rendimentos <= 5000
     if (totalBruto <= 5000) {
         irrfFinal = 0;
-    } 
-    // Regra B: Redução Progressiva se Rendimentos entre 5000 e 7350
-    else if (totalBruto > 5000 && totalBruto <= 7350) {
-        // Fórmula: 978,62 - (13,3145% * TotalBruto)
+    } else if (totalBruto > 5000 && totalBruto <= 7350) {
         const redutor = 978.62 - (0.133145 * totalBruto);
-        if (redutor > 0) {
-            irrfFinal = irrfCalculado - redutor;
-        }
+        if (redutor > 0) irrfFinal = irrfCalculado - redutor;
     }
-    // Regra C: Acima de 7350, segue o irrfCalculado normal.
-
-    // Proteção contra negativo
     if (irrfFinal < 0) irrfFinal = 0;
 
     const totalDescontos = descFaltas + descAtrasos + inss + irrfFinal + adiantamento + somaExtras;
@@ -185,20 +170,19 @@ function calcularSalario(inputs, perfil) {
     };
 }
 
-// --- 4. UI CONTROLLER ---
+// --- 4. CONTROLADOR UI ---
 document.addEventListener('DOMContentLoaded', () => {
     let perfilAtual = Store.getPerfil();
     
-    // UI: Modal Config
     function renderConfigList() {
         const container = document.getElementById('container-lista-config');
         container.innerHTML = '';
         perfilAtual.config.descontosExtras.forEach((item, index) => {
             const row = document.createElement('div');
-            row.style.cssText = "display:flex; gap:5px; margin-bottom:8px; align-items:center;";
+            row.style.cssText = "display:flex; gap:10px; margin-bottom:10px; align-items:center;";
             
             const inputNome = document.createElement('input');
-            inputNome.type = 'text'; inputNome.value = item.nome; inputNome.placeholder = 'Ex: VT, Empréstimo'; inputNome.style.flex = "2";
+            inputNome.type = 'text'; inputNome.value = item.nome; inputNome.placeholder = 'Nome'; inputNome.style.flex = "2";
             inputNome.onchange = (e) => { item.nome = e.target.value; };
             
             const inputValor = document.createElement('input');
@@ -207,12 +191,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const selTipo = document.createElement('select');
             selTipo.innerHTML = `<option value="$">R$</option><option value="%">%</option>`;
-            selTipo.value = item.tipo; selTipo.style.width = '60px';
+            selTipo.value = item.tipo; selTipo.style.width = '65px';
             selTipo.onchange = (e) => { item.tipo = e.target.value; };
 
             const btnDel = document.createElement('button');
-            btnDel.textContent = 'X';
-            btnDel.style.cssText = "background:#d32f2f; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer;";
+            btnDel.innerHTML = '&times;';
+            btnDel.className = 'btn-sm';
+            btnDel.style.background = '#c62828';
             btnDel.onclick = () => { perfilAtual.config.descontosExtras.splice(index, 1); renderConfigList(); };
 
             row.appendChild(inputNome); row.appendChild(inputValor); row.appendChild(selTipo); row.appendChild(btnDel);
@@ -220,13 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // UI: Preview na Home
+    // UI: Tabela Resumo (Home)
     function atualizarPreviewFixos() {
         const container = document.getElementById('preview-fixos');
         const extras = perfilAtual.config.descontosExtras;
 
         if (!extras || extras.length === 0) {
-            container.innerHTML = '<p style="font-style:italic; color:#aaa; margin:0;">Nenhum desconto fixo configurado.</p>';
+            container.innerHTML = '<p style="font-style:italic; color:#aaa; margin:0; font-size:0.8rem;">Nenhum desconto extra.</p>';
             return;
         }
 
@@ -235,13 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const valorDisplay = item.tipo === '$' 
                 ? parseFloat(item.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) 
                 : item.valor + '%';
-            
-            html += `
-                <tr style="border-bottom:1px dashed #eee;">
-                    <td style="padding:4px 0;">${item.nome}</td>
-                    <td style="text-align:right; font-weight:bold;">${valorDisplay}</td>
-                </tr>
-            `;
+            html += `<tr><td style="padding:2px 0;">${item.nome}</td><td style="text-align:right; font-weight:bold;">${valorDisplay}</td></tr>`;
         });
         html += '</table>';
         container.innerHTML = html;
@@ -249,13 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // INIT
     document.getElementById('nome-empresa-display').textContent = perfilAtual.nomeEmpresa;
-    atualizarPreviewFixos(); // Chama ao iniciar
+    atualizarPreviewFixos();
 
     const selDias = document.getElementById('inicioFerias');
     const selFeriados = document.getElementById('diaFeriado');
     for(let i=1; i<=31; i++){ const opt = `<option value="${i}">${i}</option>`; selDias.innerHTML += opt; selFeriados.innerHTML += opt; }
 
-    // MODAL ACTIONS
+    // MODAL
     const modal = document.getElementById('modal-config');
     document.getElementById('btn-config').onclick = () => {
         document.getElementById('cfg_nome_empresa').value = perfilAtual.nomeEmpresa;
@@ -277,11 +256,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         Store.salvarPerfil(perfilAtual);
         document.getElementById('nome-empresa-display').textContent = perfilAtual.nomeEmpresa;
-        atualizarPreviewFixos(); // Atualiza a tabela na home ao salvar
-        alert('Configurações salvas!'); modal.classList.add('hidden');
+        atualizarPreviewFixos();
+        showToast('Configurações Salvas com Sucesso!'); // Feedback App-Like
+        modal.classList.add('hidden');
     };
 
-    // FUNÇÕES AUXILIARES
     function getSafeVal(id) { const el = document.getElementById(id); return el ? el.value : ""; }
 
     function performCalc() {
@@ -338,9 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr class="summary-row"><td>Total Descontos</td><td class="valor">${Format.toBRL(res.d.totalDescontos)}</td></tr>
 
                     <tr class="section-header"><td colspan="2">Resumo Final</td></tr>
-                    <tr class="final-result-main"><td>Salário Líquido (A Receber)</td><td class="valor">${Format.toBRL(res.liquido)}</td></tr>
-                    <tr class="final-result-secondary"><td>Salário Líquido Total (Mês)</td><td class="valor">${Format.toBRL(liquidoMensal)}</td></tr>
-                    <tr class="final-result-secondary fgts-row"><td>FGTS (Depósito)</td><td class="valor">${Format.toBRL(res.fgts)}</td></tr>
+                    <tr class="final-result-main"><td>Salário Líquido</td><td class="valor">${Format.toBRL(res.liquido)}</td></tr>
+                    <tr class="final-result-secondary"><td>Total Mensal (Líq + Adiant)</td><td class="valor">${Format.toBRL(liquidoMensal)}</td></tr>
+                    <tr class="final-result-secondary fgts-row"><td>FGTS</td><td class="valor">${Format.toBRL(res.fgts)}</td></tr>
                 </tbody>
             </table>
         `;
@@ -349,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo(0,0);
     }
 
+    // FÉRIAS
     const mesReferenciaInput = document.getElementById('mesReferencia');
     const diasTrabInput = document.getElementById('diasTrab');
     const boxFerias = document.getElementById('box-calculo-ferias');
@@ -367,11 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const colQtd = document.getElementById('col-qtd');
         const lblData = document.getElementById('lbl-data-ferias');
         if (modo === 'retorno_ferias') {
-            colQtd.classList.add('hidden');
-            lblData.textContent = "Dia do Retorno";
+            colQtd.classList.add('hidden'); lblData.textContent = "Dia do Retorno";
         } else {
-            colQtd.classList.remove('hidden');
-            lblData.textContent = "Dia de Início";
+            colQtd.classList.remove('hidden'); lblData.textContent = "Dia de Início";
         }
 
         const mesRef = mesReferenciaInput.value;
