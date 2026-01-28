@@ -26,7 +26,7 @@ const regrasFederais = {
 
 // --- 2. PERFIL ---
 const perfilPadrao = {
-    nomeEmpresa: "Minha Empresa",
+    nomeEmpresa: "",
     config: {
         adiantamento: 40,   
         noturno: 20,        
@@ -441,3 +441,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     preencherDiasMes();
 });
+
