@@ -20,8 +20,8 @@
               <span style="font-size: 1.5rem;">💰</span>
               <h1>Salário<span class="highlight">Flex</span></h1>
           </div>
-          <button id="btn-config" class="btn-icon" aria-label="Configurações">
-              ⚙️
+          <button id="btn-config" class="btn-config-header" aria-label="Configurações">
+              <span>⚙️ Configurar / Add Descontos</span>
           </button>
       </div>
   </header>
@@ -55,9 +55,9 @@
                         <div class="input-group">
                             <label class="label-bold">Situação</label>
                             <div class="segment-control">
-                                <label><input type="radio" name="tipoDias" value="completo" checked /><span>Mês Cheio</span></label>
-                                <label><input type="radio" name="tipoDias" value="saida_ferias" /><span>Saída Fér.</span></label>
-                                <label><input type="radio" name="tipoDias" value="retorno_ferias" /><span>Volta Fér.</span></label>
+                                <label><input type="radio" name="tipoDias" value="completo" checked /><span>Mensal</span></label>
+                                <label><input type="radio" name="tipoDias" value="saida_ferias" /><span>Mês de Férias</span></label>
+                                <label><input type="radio" name="tipoDias" value="retorno_ferias" /><span>Retorno de Férias</span></label>
                             </div>
                         </div>
 
@@ -87,7 +87,10 @@
                         </div>
 
                         <div class="input-group mt-2">
-                            <label class="label-bold">Feriados Locais</label>
+                            <label class="label-bold" style="margin-bottom:2px;">Feriados Locais</label>
+                            <p class="helper-text" style="margin-bottom:10px; color:#0d47a1;">
+                                <small>ℹ️ Adicione aqui os feriados municipais e estaduais.</small>
+                            </p>
                             <div class="feriado-wrapper">
                                 <select id="diaFeriado"><option value="">Selecionar Dia</option></select>
                                 <button type="button" id="btn-add-feriado" class="btn-sm">Add</button>
