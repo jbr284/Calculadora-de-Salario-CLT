@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('btn-close-modal').onclick = () => modal.classList.add('hidden');
     
-    document.getElementById('btn-add-novo-desconto').onclick = () => {
+    document.getElementById('btn-adic.-novo-desconto').onclick = () => {
         perfilAtual.config.descontosExtras.push({ id: Date.now(), nome: "", valor: 0, tipo: "$" });
         renderConfigList();
     };
@@ -441,4 +441,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     preencherDiasMes();
 });
+
 
