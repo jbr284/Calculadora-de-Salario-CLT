@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Calculadora Salário Flex</title>
+  <title>Calculadora Salário Flex 2026</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
@@ -59,6 +59,7 @@
                             <p id="feedback-ferias" style="font-size: 0.8em; margin-top:5px; font-style:italic; color:#555;"></p>
                         </div>
                     </div>
+                    
                     <div class="input-group">
                         <label>Dias a Pagar</label>
                         <input type="number" id="diasTrab" readonly class="input-readonly" value="30" />
@@ -67,6 +68,7 @@
                         <label>Dependentes</label>
                         <input type="number" id="dependentes" />
                     </div>
+                    
                     <div class="input-group">
                         <label class="label-bold">Feriados Regionais</label>
                         <div class="feriado-box-container">
@@ -103,12 +105,11 @@
                     
                     <div style="margin-top: 25px;">
                         <label style="font-size:0.9em; font-weight:bold; color:#0d47a1; border-bottom:1px solid #eee; display:block; padding-bottom:5px; margin-bottom:10px;">
-                            Descontos Fixos (Configurados):
+                            Descontos Fixos Ativos:
                         </label>
                         <div id="preview-fixos" style="font-size: 0.9em; color: #555;">
                             </div>
                     </div>
-
                 </div>
             </div>
         </form>
@@ -165,6 +166,15 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(()=>{});
+        });
+    }
+  </script>
+  
   <script src="app.js"></script>
 </body>
 </html>
