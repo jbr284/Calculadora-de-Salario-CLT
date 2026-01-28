@@ -1,0 +1,21 @@
+{
+  "name": "Calculadora Salário Flex 2026",
+  "short_name": "CalcSalário",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d47a1",
+  "description": "Calculadora de salário líquido com regras de 2026 (INSS e IRRF atualizados).",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
