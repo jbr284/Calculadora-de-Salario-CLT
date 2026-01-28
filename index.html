@@ -2,166 +2,199 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Calculadora Salário Flex 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>CalcSalário 2026</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <meta name="theme-color" content="#0d47a1">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
-  <div class="container">
+
+  <div id="toast" class="toast hidden">Configuração Salva!</div>
+
+  <header class="app-header">
+      <div class="header-content">
+          <div class="logo-area">
+              <span style="font-size: 1.5rem;">💰</span>
+              <h1>Salário<span class="highlight">Flex</span></h1>
+          </div>
+          <button id="btn-config" class="btn-icon" aria-label="Configurações">
+              ⚙️
+          </button>
+      </div>
+  </header>
+
+  <main class="container">
     
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-        <h1 class="main-title" style="margin: 0; text-align: left;">Cálculo de Salário</h1>
-        <button id="btn-config" class="btn-gray" style="width: auto; padding: 8px 15px;">⚙️ Configurar</button>
-    </div>
-    
-    <div id="form-view">
-        <div id="nome-empresa-display" style="text-align:center; color:#666; margin-bottom:20px; font-weight:bold;"></div>
+    <div id="form-view" class="view active">
+        <div id="nome-empresa-display" class="company-badge"></div>
 
         <form id="formulario">
             <input type="hidden" id="diasUteis" />
             <input type="hidden" id="domFeriados" />
             <input type="hidden" id="feriadosExtras" />
 
-            <div class="layout-grid">
+            <div class="cards-grid">
                 
-                <div class="column">
-                    <h2 class="column-title">Dados Iniciais</h2>
-                    <div class="input-group">
-                        <label>Mês de Referência</label>
-                        <input type="month" id="mesReferencia" required />
+                <div class="card">
+                    <div class="card-header">
+                        <span class="icon">📅</span> <h2>Dados Iniciais</h2>
                     </div>
-                    <div class="input-group">
-                        <label>Salário Mensal (R$)</label>
-                        <input type="text" id="salario" inputmode="decimal" placeholder="0,00" required />
-                    </div>
-                    <div class="input-group">
-                        <label class="label-bold">Situação</label>
-                        <div class="radio-stack">
-                            <label><input type="radio" name="tipoDias" value="completo" checked /> 1. Mês Completo</label>
-                            <label><input type="radio" name="tipoDias" value="saida_ferias" /> 2. Saída de Férias</label>
-                            <label><input type="radio" name="tipoDias" value="retorno_ferias" /> 3. Retorno de Férias</label>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <label>Mês de Referência</label>
+                            <input type="month" id="mesReferencia" required />
+                        </div>
+                        <div class="input-group">
+                            <label>Salário Mensal (R$)</label>
+                            <input type="text" id="salario" inputmode="decimal" placeholder="0,00" class="input-lg" required />
                         </div>
                         
-                        <div id="box-calculo-ferias" class="ferias-box hidden">
-                            <div class="ferias-grid">
-                                <div id="col-data">
-                                    <label id="lbl-data-ferias" style="font-size:0.85em;">Dia Início</label>
+                        <div class="input-group">
+                            <label class="label-bold">Situação</label>
+                            <div class="segment-control">
+                                <label><input type="radio" name="tipoDias" value="completo" checked /><span>Mês Cheio</span></label>
+                                <label><input type="radio" name="tipoDias" value="saida_ferias" /><span>Saída Fér.</span></label>
+                                <label><input type="radio" name="tipoDias" value="retorno_ferias" /><span>Volta Fér.</span></label>
+                            </div>
+                        </div>
+
+                        <div id="box-calculo-ferias" class="info-box hidden">
+                            <div class="row-inputs">
+                                <div class="col">
+                                    <label id="lbl-data-ferias">Dia Início</label>
                                     <select id="inicioFerias"><option value="">Dia</option></select>
                                 </div>
-                                <div id="col-qtd">
-                                    <label style="font-size:0.85em;">Dias</label>
+                                <div class="col" id="col-qtd">
+                                    <label>Duração (Dias)</label>
                                     <input type="number" id="qtdDiasFerias" placeholder="30">
                                 </div>
                             </div>
-                            <p id="feedback-ferias" style="font-size: 0.8em; margin-top:5px; font-style:italic; color:#555;"></p>
+                            <p id="feedback-ferias" class="helper-text"></p>
                         </div>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>Dias a Pagar</label>
-                        <input type="number" id="diasTrab" readonly class="input-readonly" value="30" />
-                    </div>
-                    <div class="input-group">
-                        <label>Dependentes</label>
-                        <input type="number" id="dependentes" />
-                    </div>
-                    
-                    <div class="input-group">
-                        <label class="label-bold">Feriados Regionais</label>
-                        <div class="feriado-box-container">
-                            <div class="feriado-inputs">
-                                <select id="diaFeriado"><option value="">Dia</option></select>
-                                <button type="button" id="btn-add-feriado" class="btn-gray">Add</button>
-                                <button type="button" id="btn-limpar-feriados" class="btn-red">X</button>
+
+                        <div class="row-inputs">
+                            <div class="col">
+                                <label>Dias Pagos</label>
+                                <input type="number" id="diasTrab" readonly class="input-readonly" value="30" />
                             </div>
-                            <div id="listaFeriados" class="tags-container"></div>
+                            <div class="col">
+                                <label>Dependentes</label>
+                                <input type="number" id="dependentes" placeholder="0" />
+                            </div>
+                        </div>
+
+                        <div class="input-group mt-2">
+                            <label class="label-bold">Feriados Locais</label>
+                            <div class="feriado-wrapper">
+                                <select id="diaFeriado"><option value="">Selecionar Dia</option></select>
+                                <button type="button" id="btn-add-feriado" class="btn-sm">Add</button>
+                                <button type="button" id="btn-limpar-feriados" class="btn-sm btn-outline">Limpar</button>
+                            </div>
+                            <div id="listaFeriados" class="tags-list"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="column">
-                    <h2 class="column-title">Proventos</h2>
-                    <div class="input-group"><label>HE 50%</label><input type="text" id="he50" class="hora-conversivel"></div>
-                    <div class="input-group"><label>HE 60%</label><input type="text" id="he60" class="hora-conversivel"></div>
-                    <div class="input-group"><label>HE 80%</label><input type="text" id="he80" class="hora-conversivel"></div>
-                    <div class="input-group"><label>HE 100%</label><input type="text" id="he100" class="hora-conversivel"></div>
-                    <div class="input-group"><label>HE 150%</label><input type="text" id="he150" class="hora-conversivel"></div>
-                    <div class="input-group"><label>Adic. Noturno (h)</label><input type="text" id="noturno" class="hora-conversivel"></div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="icon">📈</span> <h2>Proventos</h2>
+                    </div>
+                    <div class="card-body grid-2-col">
+                        <div class="input-group"><label>HE 50%</label><input type="text" id="he50" class="hora-conversivel" placeholder="00:00"></div>
+                        <div class="input-group"><label>HE 60%</label><input type="text" id="he60" class="hora-conversivel" placeholder="00:00"></div>
+                        <div class="input-group"><label>HE 80%</label><input type="text" id="he80" class="hora-conversivel" placeholder="00:00"></div>
+                        <div class="input-group"><label>HE 100%</label><input type="text" id="he100" class="hora-conversivel" placeholder="00:00"></div>
+                        <div class="input-group"><label>HE 150%</label><input type="text" id="he150" class="hora-conversivel" placeholder="00:00"></div>
+                        <div class="input-group"><label>Adic. Noturno</label><input type="text" id="noturno" class="hora-conversivel" placeholder="00:00"></div>
+                    </div>
                 </div>
 
-                <div class="column">
-                    <h2 class="column-title">Descontos Variáveis</h2>
-                    <div class="input-group"><label>Faltas (dias)</label><input type="text" id="faltas" inputmode="decimal"></div>
-                    <div class="input-group"><label>Atrasos (horas)</label><input type="text" id="atrasos" class="hora-conversivel"></div>
-                    
-                    <div class="input-group" style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-top: 20px;">
-                        <label style="font-weight:normal; cursor:pointer; margin:0;">
-                            <input type="checkbox" id="chk_adiantamento" checked> Calcular Adiantamento Salarial
-                        </label>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="icon">📉</span> <h2>Descontos Variáveis</h2>
                     </div>
-                    
-                    <div style="margin-top: 25px;">
-                        <label style="font-size:0.9em; font-weight:bold; color:#0d47a1; border-bottom:1px solid #eee; display:block; padding-bottom:5px; margin-bottom:10px;">
-                            Descontos Fixos Ativos:
-                        </label>
-                        <div id="preview-fixos" style="font-size: 0.9em; color: #555;">
-                            </div>
+                    <div class="card-body">
+                        <div class="row-inputs">
+                            <div class="col"><label>Faltas (dias)</label><input type="text" id="faltas" inputmode="decimal"></div>
+                            <div class="col"><label>Atrasos (hs)</label><input type="text" id="atrasos" class="hora-conversivel"></div>
+                        </div>
+                        
+                        <div class="switch-container">
+                            <label class="switch-label">
+                                <span>Adiantamento Salarial</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="chk_adiantamento" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </label>
+                        </div>
+
+                        <div class="summary-box">
+                            <div class="summary-header">Descontos Fixos Ativos</div>
+                            <div id="preview-fixos" class="summary-content"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </form>
-        <div class="actions-footer">
-            <button type="button" id="btn-calcular" class="btn-primary">Calcular</button>
-            <button type="button" id="btn-salvar" class="btn-secondary">Salvar Dados</button>
+        
+        <div class="fab-container">
+            <button type="button" id="btn-calcular" class="btn-primary-lg">CALCULAR SALÁRIO</button>
         </div>
     </div>
 
-    <div id="result-view" class="hidden">
-      <div id="resultado-container"></div>
+    <div id="result-view" class="view hidden">
+      <div class="result-card">
+          <div id="resultado-container"></div>
+      </div>
       <div class="actions-footer">
-          <button type="button" id="btn-voltar" class="btn-secondary">Voltar</button>
-          <button type="button" id="btn-pdf" class="btn-primary" style="background-color: #d32f2f;">PDF</button>
+          <button type="button" id="btn-voltar" class="btn-secondary">Voltar / Editar</button>
+          <button type="button" id="btn-pdf" class="btn-primary">Baixar PDF</button>
       </div>
     </div>
-  </div>
+
+  </main>
 
   <div id="modal-config" class="modal hidden">
       <div class="modal-content">
-          <span id="btn-close-modal" class="close">&times;</span>
-          <h2>Configurações da Empresa</h2>
+          <div class="modal-header">
+              <h2>Configurações</h2>
+              <span id="btn-close-modal" class="close-icon">&times;</span>
+          </div>
           
-          <div class="input-group">
-              <label>Nome da Empresa</label>
-              <input type="text" id="cfg_nome_empresa" placeholder="Ex: Minha Fábrica LTDA">
+          <div class="modal-body">
+              <div class="input-group">
+                  <label>Nome da Empresa</label>
+                  <input type="text" id="cfg_nome_empresa" placeholder="Ex: Minha Fábrica LTDA">
+              </div>
+
+              <div class="row-inputs">
+                  <div class="col">
+                      <label>% Adiantamento</label>
+                      <input type="number" id="cfg_perc_adiantamento" placeholder="40">
+                  </div>
+                  <div class="col">
+                      <label>% Adic. Noturno</label>
+                      <input type="number" id="cfg_perc_noturno" placeholder="20">
+                  </div>
+              </div>
+
+              <div class="divider"></div>
+              
+              <h3>Descontos Fixos</h3>
+              <p class="helper-text">Adicione VT, Plano de Saúde, Sindicato, etc.</p>
+              
+              <div id="container-lista-config" class="dynamic-list"></div>
+
+              <button type="button" id="btn-add-novo-desconto" class="btn-dashed">+ Novo Desconto</button>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-              <div class="input-group">
-                  <label>% Adiantamento (Padrão)</label>
-                  <input type="number" id="cfg_perc_adiantamento" placeholder="40">
-              </div>
-              <div class="input-group">
-                  <label>% Adic. Noturno</label>
-                  <input type="number" id="cfg_perc_noturno" placeholder="20">
-              </div>
+          <div class="modal-footer">
+              <button type="button" id="btn-save-config" class="btn-primary-block">Salvar Alterações</button>
           </div>
-
-          <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
-          
-          <h3 style="font-size:1.1em; color:#0d47a1; margin-top:0;">Descontos Fixos & Mensais</h3>
-          <p style="font-size:0.85em; color:#666; margin-bottom:10px;">
-              Adicione aqui: VT (%), Empréstimo (R$), Plano de Saúde (R$), Sindicato, etc.
-          </p>
-          
-          <div id="container-lista-config" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; padding-right:5px;">
-              </div>
-
-          <button type="button" id="btn-add-novo-desconto" class="btn-gray" style="width:100%; border:1px dashed #999;">+ Adicionar Novo Desconto</button>
-
-          <button type="button" id="btn-save-config" class="btn-primary" style="margin-top:20px;">Salvar Configurações</button>
       </div>
   </div>
 
