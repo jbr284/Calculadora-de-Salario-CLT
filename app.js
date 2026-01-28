@@ -1,6 +1,6 @@
-// app.js - VERSÃO FINAL APP PWA 2026
+// app.js - VERSÃO FINAL (DSR CORRIGIDO: APENAS SOBRE A VARIÁVEL)
 
-// --- 1. REGRAS FIXAS (LEI 2026 - Oficial & Ajustado) ---
+// --- 1. REGRAS FIXAS (LEI 2026 - INSS da Imagem) ---
 const regrasFederais = {
     ano: 2026,
     salarioMinimo: 1621.00,
@@ -26,7 +26,7 @@ const regrasFederais = {
 
 // --- 2. PERFIL ---
 const perfilPadrao = {
-    nomeEmpresa: "",
+    nomeEmpresa: "Minha Empresa",
     config: {
         adiantamento: 40,   
         noturno: 20,        
@@ -60,12 +60,20 @@ const Format = {
     toBRL: (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 };
 
-// --- UI UTILS ---
+// ARREDONDAMENTO FINANCEIRO (2 CASAS)
+function round2(num) {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
 function showToast(msg) {
     const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+    if(toast) {
+        toast.textContent = msg;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    } else {
+        alert(msg);
+    }
 }
 
 // --- 3. MOTOR DE CÁLCULO ---
@@ -77,61 +85,72 @@ function calcularSalario(inputs, perfil) {
 
     const cfg = perfil.config;
     const diasEfetivos = (!diasTrab || diasTrab === 0) ? 30 : diasTrab;
-    const valorDia = salario / 30;
-    const valorHora = salario / 220;
-
-    // Proventos
-    const vencBase = valorDia * diasEfetivos;
-    const valorHE50 = he50 * valorHora * 1.5;
-    const valorHE60 = he60 * valorHora * 1.6;
-    const valorHE80 = he80 * valorHora * 1.8;
-    const valorHE100 = he100 * valorHora * 2.0;
-    const valorHE150 = he150 * valorHora * 2.5;
-    const percNoturno = cfg.noturno / 100;
-    const valorNoturno = noturno * valorHora * percNoturno;
-
-    const totalHE = valorHE50 + valorHE60 + valorHE80 + valorHE100 + valorHE150;
-    const dsrHE = (totalHE / diasUteis) * domFeriados;
-    const dsrNoturno = (valorNoturno / diasUteis) * domFeriados;
     
-    // Rendimentos Totais (Base de Isenção IRRF)
+    // Valores Unitários
+    const valorDia = round2(salario / 30);
+    const valorHora = round2(salario / 220);
+
+    // --- PROVENTOS ---
+    const vencBase = round2(valorDia * diasEfetivos);
+    
+    // Horas Extras
+    const valorHE50 = round2(he50 * valorHora * 1.5);
+    const valorHE60 = round2(he60 * valorHora * 1.6);
+    const valorHE80 = round2(he80 * valorHora * 1.8);
+    const valorHE100 = round2(he100 * valorHora * 2.0);
+    const valorHE150 = round2(he150 * valorHora * 2.5);
+    const totalHE = valorHE50 + valorHE60 + valorHE80 + valorHE100 + valorHE150;
+
+    // Adicional Noturno (Valor puro do adicional)
+    // Ex: Se hora = 10 e add = 20%, ValorNoturno = 2
+    const percNoturno = cfg.noturno / 100;
+    const valorNoturno = round2(noturno * valorHora * percNoturno);
+
+    // --- DSRs ---
+    const dsrHE = round2((totalHE / diasUteis) * domFeriados);
+
+    // DSR NOTURNO (CORRIGIDO: Apenas sobre o valor do Adicional)
+    // Fórmula Imagem Nova: [Total Hr * (Sal/220) * %] / Dias Úteis * DSR
+    // Onde [Total Hr * (Sal/220) * %] é exatamente a variável 'valorNoturno' calculada acima.
+    const dsrNoturno = round2((valorNoturno / diasUteis) * domFeriados);
+    
+    // Total Bruto
     const totalBruto = vencBase + totalHE + valorNoturno + dsrHE + dsrNoturno;
 
-    // Descontos
-    const fgts = totalBruto * 0.08;
-    const descFaltas = faltas * valorDia;
-    const descAtrasos = atrasos * valorHora;
-    const adiantamento = options.adiantamento ? ((salario / 30) * diasEfetivos * (cfg.adiantamento / 100)) : 0;
+    // --- DESCONTOS ---
+    const fgts = round2(totalBruto * 0.08);
+    const descFaltas = round2(faltas * valorDia);
+    const descAtrasos = round2(atrasos * valorHora);
+    const adiantamento = options.adiantamento ? round2((salario / 30) * diasEfetivos * (cfg.adiantamento / 100)) : 0;
     
-    // Extras
     let somaExtras = 0;
     const listaExtrasCalculados = [];
     if (cfg.descontosExtras && cfg.descontosExtras.length > 0) {
         cfg.descontosExtras.forEach(itemConfig => {
             let valorCalculado = 0;
             if (itemConfig.tipo === '%') {
-                valorCalculado = salario * (itemConfig.valor / 100);
+                valorCalculado = round2(salario * (itemConfig.valor / 100));
             } else {
-                valorCalculado = itemConfig.valor;
+                valorCalculado = round2(itemConfig.valor);
             }
             somaExtras += valorCalculado;
             listaExtrasCalculados.push({ nome: itemConfig.nome, valor: valorCalculado });
         });
     }
 
-    // INSS
+    // INSS (Tabela Fixa da Imagem)
     let baseINSS = totalBruto;
     if (baseINSS > regrasFederais.tetoINSS) baseINSS = regrasFederais.tetoINSS;
     let inss = 0;
     for (const f of regrasFederais.tabelaINSS) {
         if (baseINSS <= f.ate) {
-            inss = (baseINSS * f.aliq) - f.ded;
+            inss = round2((baseINSS * f.aliq) - f.ded);
             break;
         }
     }
     if (inss === 0 && baseINSS >= regrasFederais.tabelaINSS[3].ate) {
         const ult = regrasFederais.tabelaINSS[3];
-        inss = (baseINSS * ult.aliq) - ult.ded;
+        inss = round2((baseINSS * ult.aliq) - ult.ded);
     }
 
     // IRRF 2026
@@ -143,22 +162,20 @@ function calcularSalario(inputs, perfil) {
     if (baseIRRF > 0) {
         for (const f of regrasFederais.tabelaIRRF) {
             if (f.ate === "acima" || baseIRRF <= f.ate) {
-                irrfCalculado = (baseIRRF * f.aliq) - f.ded;
+                irrfCalculado = round2((baseIRRF * f.aliq) - f.ded);
                 break;
             }
         }
     }
     if (irrfCalculado < 0) irrfCalculado = 0;
 
-    // Redutor 2026
     let irrfFinal = irrfCalculado;
     if (totalBruto <= 5000) {
         irrfFinal = 0;
     } else if (totalBruto > 5000 && totalBruto <= 7350) {
-        const redutor = 978.62 - (0.133145 * totalBruto);
-        if (redutor > 0) irrfFinal = irrfCalculado - redutor;
+        const redutor = round2(978.62 - (0.133145 * totalBruto));
+        if (redutor > 0) irrfFinal = Math.max(0, round2(irrfCalculado - redutor));
     }
-    if (irrfFinal < 0) irrfFinal = 0;
 
     const totalDescontos = descFaltas + descAtrasos + inss + irrfFinal + adiantamento + somaExtras;
     const liquido = totalBruto - totalDescontos;
@@ -180,53 +197,27 @@ document.addEventListener('DOMContentLoaded', () => {
         perfilAtual.config.descontosExtras.forEach((item, index) => {
             const row = document.createElement('div');
             row.style.cssText = "display:flex; gap:10px; margin-bottom:10px; align-items:center;";
-            
-            const inputNome = document.createElement('input');
-            inputNome.type = 'text'; inputNome.value = item.nome; inputNome.placeholder = 'Nome'; inputNome.style.flex = "2";
-            inputNome.onchange = (e) => { item.nome = e.target.value; };
-            
-            const inputValor = document.createElement('input');
-            inputValor.type = 'number'; inputValor.value = item.valor; inputValor.placeholder = 'Valor'; inputValor.style.flex = "1";
-            inputValor.onchange = (e) => { item.valor = parseFloat(e.target.value) || 0; };
-
-            const selTipo = document.createElement('select');
-            selTipo.innerHTML = `<option value="$">R$</option><option value="%">%</option>`;
-            selTipo.value = item.tipo; selTipo.style.width = '65px';
-            selTipo.onchange = (e) => { item.tipo = e.target.value; };
-
-            const btnDel = document.createElement('button');
-            btnDel.innerHTML = '&times;';
-            btnDel.className = 'btn-sm';
-            btnDel.style.background = '#c62828';
-            btnDel.onclick = () => { perfilAtual.config.descontosExtras.splice(index, 1); renderConfigList(); };
-
+            const inputNome = document.createElement('input'); inputNome.type = 'text'; inputNome.value = item.nome; inputNome.placeholder = 'Nome'; inputNome.style.flex = "2"; inputNome.onchange = (e) => { item.nome = e.target.value; };
+            const inputValor = document.createElement('input'); inputValor.type = 'number'; inputValor.value = item.valor; inputValor.placeholder = 'Valor'; inputValor.style.flex = "1"; inputValor.onchange = (e) => { item.valor = parseFloat(e.target.value) || 0; };
+            const selTipo = document.createElement('select'); selTipo.innerHTML = `<option value="$">R$</option><option value="%">%</option>`; selTipo.value = item.tipo; selTipo.style.width = '65px'; selTipo.onchange = (e) => { item.tipo = e.target.value; };
+            const btnDel = document.createElement('button'); btnDel.innerHTML = '&times;'; btnDel.className = 'btn-sm'; btnDel.style.background = '#c62828'; btnDel.onclick = () => { perfilAtual.config.descontosExtras.splice(index, 1); renderConfigList(); };
             row.appendChild(inputNome); row.appendChild(inputValor); row.appendChild(selTipo); row.appendChild(btnDel);
             container.appendChild(row);
         });
     }
 
-    // UI: Tabela Resumo (Home)
     function atualizarPreviewFixos() {
         const container = document.getElementById('preview-fixos');
         const extras = perfilAtual.config.descontosExtras;
-
-        if (!extras || extras.length === 0) {
-            container.innerHTML = '<p style="font-style:italic; color:#aaa; margin:0; font-size:0.8rem;">Nenhum desconto extra.</p>';
-            return;
-        }
-
+        if (!extras || extras.length === 0) { container.innerHTML = '<p style="font-style:italic; color:#aaa; margin:0; font-size:0.8rem;">Nenhum desconto extra.</p>'; return; }
         let html = '<table style="width:100%; border-collapse:collapse;">';
         extras.forEach(item => {
-            const valorDisplay = item.tipo === '$' 
-                ? parseFloat(item.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) 
-                : item.valor + '%';
+            const valorDisplay = item.tipo === '$' ? parseFloat(item.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : item.valor + '%';
             html += `<tr><td style="padding:2px 0;">${item.nome}</td><td style="text-align:right; font-weight:bold;">${valorDisplay}</td></tr>`;
         });
-        html += '</table>';
-        container.innerHTML = html;
+        html += '</table>'; container.innerHTML = html;
     }
 
-    // INIT
     document.getElementById('nome-empresa-display').textContent = perfilAtual.nomeEmpresa;
     atualizarPreviewFixos();
 
@@ -234,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const selFeriados = document.getElementById('diaFeriado');
     for(let i=1; i<=31; i++){ const opt = `<option value="${i}">${i}</option>`; selDias.innerHTML += opt; selFeriados.innerHTML += opt; }
 
-    // MODAL
     const modal = document.getElementById('modal-config');
     document.getElementById('btn-config').onclick = () => {
         document.getElementById('cfg_nome_empresa').value = perfilAtual.nomeEmpresa;
@@ -244,21 +234,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('btn-close-modal').onclick = () => modal.classList.add('hidden');
     
-    document.getElementById('btn-adic.-novo-desconto').onclick = () => {
-        perfilAtual.config.descontosExtras.push({ id: Date.now(), nome: "", valor: 0, tipo: "$" });
-        renderConfigList();
-    };
+    // BOTÃO ADD CORRIGIDO
+    const btnAddDesconto = document.getElementById('btn-add-novo-desconto');
+    if(btnAddDesconto){
+        btnAddDesconto.onclick = () => { perfilAtual.config.descontosExtras.push({ id: Date.now(), nome: "", valor: 0, tipo: "$" }); renderConfigList(); };
+    }
+
     document.getElementById('btn-save-config').onclick = () => {
         perfilAtual.nomeEmpresa = document.getElementById('cfg_nome_empresa').value || "Minha Empresa";
         perfilAtual.config.adiantamento = parseFloat(document.getElementById('cfg_perc_adiantamento').value) || 0;
         perfilAtual.config.noturno = parseFloat(document.getElementById('cfg_perc_noturno').value) || 0;
         perfilAtual.config.descontosExtras = perfilAtual.config.descontosExtras.filter(i => i.nome.trim() !== "");
-        
         Store.salvarPerfil(perfilAtual);
         document.getElementById('nome-empresa-display').textContent = perfilAtual.nomeEmpresa;
-        atualizarPreviewFixos();
-        showToast('Configurações Salvas com Sucesso!'); // Feedback App-Like
-        modal.classList.add('hidden');
+        atualizarPreviewFixos(); showToast('Configurações Salvas!'); modal.classList.add('hidden');
     };
 
     function getSafeVal(id) { const el = document.getElementById(id); return el ? el.value : ""; }
@@ -278,9 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
             noturno: Format.number(getSafeVal('noturno')),
             diasUteis: parseInt(getSafeVal('diasUteis')) || 0,
             domFeriados: parseInt(getSafeVal('domFeriados')) || 0,
-            options: {
-                adiantamento: document.getElementById('chk_adiantamento') ? document.getElementById('chk_adiantamento').checked : false
-            }
+            options: { adiantamento: document.getElementById('chk_adiantamento') ? document.getElementById('chk_adiantamento').checked : false }
         };
 
         const res = calcularSalario(inputs, perfilAtual);
@@ -317,9 +304,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr class="summary-row"><td>Total Descontos</td><td class="valor">${Format.toBRL(res.d.totalDescontos)}</td></tr>
 
                     <tr class="section-header"><td colspan="2">Resumo Final</td></tr>
-                    <tr class="final-result-main"><td>Salário Líquido</td><td class="valor">${Format.toBRL(res.liquido)}</td></tr>
-                    <tr class="final-result-secondary"><td>Total Mensal (Líq + Adiant)</td><td class="valor">${Format.toBRL(liquidoMensal)}</td></tr>
-                    <tr class="final-result-secondary fgts-row"><td>FGTS</td><td class="valor">${Format.toBRL(res.fgts)}</td></tr>
+                    <tr class="final-result-main"><td>Salário Líquido (A Receber)</td><td class="valor">${Format.toBRL(res.liquido)}</td></tr>
+                    <tr class="final-result-secondary"><td>Salário Líquido Total (Mês)</td><td class="valor">${Format.toBRL(liquidoMensal)}</td></tr>
+                    <tr class="final-result-secondary fgts-row"><td>FGTS (Depósito)</td><td class="valor">${Format.toBRL(res.fgts)}</td></tr>
                 </tbody>
             </table>
         `;
@@ -328,118 +315,52 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo(0,0);
     }
 
-    // FÉRIAS
     const mesReferenciaInput = document.getElementById('mesReferencia');
     const diasTrabInput = document.getElementById('diasTrab');
     const boxFerias = document.getElementById('box-calculo-ferias');
     const qtdDiasFeriasInput = document.getElementById('qtdDiasFerias');
     const inicioFeriasInput = document.getElementById('inicioFerias');
 
-    if (!mesReferenciaInput.value) {
-        const now = new Date(); mesReferenciaInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    }
+    if (!mesReferenciaInput.value) { const now = new Date(); mesReferenciaInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; }
 
     function atualizarFerias() {
         const modo = document.querySelector('input[name="tipoDias"]:checked').value;
         if (modo === 'completo') { boxFerias.classList.add('hidden'); diasTrabInput.value = 30; return; }
         boxFerias.classList.remove('hidden');
-        
         const colQtd = document.getElementById('col-qtd');
         const lblData = document.getElementById('lbl-data-ferias');
-        if (modo === 'retorno_ferias') {
-            colQtd.classList.add('hidden'); lblData.textContent = "Dia do Retorno";
-        } else {
-            colQtd.classList.remove('hidden'); lblData.textContent = "Dia de Início";
-        }
-
-        const mesRef = mesReferenciaInput.value;
-        const diaInicio = parseInt(inicioFeriasInput.value);
-        const qtdDias = parseInt(qtdDiasFeriasInput.value);
+        if (modo === 'retorno_ferias') { colQtd.classList.add('hidden'); lblData.textContent = "Dia do Retorno"; } else { colQtd.classList.remove('hidden'); lblData.textContent = "Dia de Início"; }
+        const mesRef = mesReferenciaInput.value; const diaInicio = parseInt(inicioFeriasInput.value); const qtdDias = parseInt(qtdDiasFeriasInput.value);
         if (!mesRef || !diaInicio) { diasTrabInput.value = 0; return; }
-        const [ano, mes] = mesRef.split('-').map(Number);
-        const ultimoDiaMes = new Date(ano, mes, 0).getDate();
-        const diaValidado = Math.min(diaInicio, ultimoDiaMes);
+        const [ano, mes] = mesRef.split('-').map(Number); const ultimoDiaMes = new Date(ano, mes, 0).getDate(); const diaValidado = Math.min(diaInicio, ultimoDiaMes);
         let diasPagar = 0;
         if (modo === 'saida_ferias') {
-            if(!qtdDias) return;
-            const dataFim = new Date(ano, mes-1, diaValidado);
-            dataFim.setDate(dataFim.getDate() + qtdDias - 1);
-            const fimMesDate = new Date(ano, mes, 0);
-            if (dataFim <= fimMesDate) diasPagar = 30 - qtdDias; 
-            else diasPagar = diaValidado - 1;
-        } else {
-            diasPagar = 30 - (diaValidado - 1);
-        }
+            if(!qtdDias) return; const dataFim = new Date(ano, mes-1, diaValidado); dataFim.setDate(dataFim.getDate() + qtdDias - 1); const fimMesDate = new Date(ano, mes, 0);
+            if (dataFim <= fimMesDate) diasPagar = 30 - qtdDias; else diasPagar = diaValidado - 1;
+        } else { diasPagar = 30 - (diaValidado - 1); }
         diasTrabInput.value = Math.max(0, Math.min(30, diasPagar));
     }
 
     function preencherDiasMes() {
-        const mesAno = mesReferenciaInput.value;
-        if (!mesAno) return;
-        const [ano, mes] = mesAno.split('-').map(Number);
-        const diasNoMes = new Date(ano, mes, 0).getDate();
+        const mesAno = mesReferenciaInput.value; if (!mesAno) return;
+        const [ano, mes] = mesAno.split('-').map(Number); const diasNoMes = new Date(ano, mes, 0).getDate();
         let diasUteis = 0, domingos = 0;
-        for (let d = 1; d <= diasNoMes; d++) {
-            const data = new Date(ano, mes - 1, d);
-            const diaSemana = data.getDay();
-            if (diaSemana >= 1 && diaSemana <= 6) diasUteis++;
-            if (diaSemana === 0) domingos++;
-        }
+        for (let d = 1; d <= diasNoMes; d++) { const data = new Date(ano, mes - 1, d); const diaSemana = data.getDay(); if (diaSemana >= 1 && diaSemana <= 6) diasUteis++; if (diaSemana === 0) domingos++; }
         const feriadosFixos = ["01/01", "21/04", "01/05", "07/09", "12/10", "02/11", "15/11", "25/12"];
         let feriadosNacionais = 0;
-        feriadosFixos.forEach(fix => {
-            const [dia, mesFix] = fix.split('/');
-            if (parseInt(mesFix) === mes) {
-                const dt = new Date(ano, mes - 1, parseInt(dia));
-                if (dt.getDay() !== 0) feriadosNacionais++;
-            }
-        });
-        const extrasStr = document.getElementById('feriadosExtras').value;
-        const qtdExtras = extrasStr ? extrasStr.split(',').length : 0;
-        document.getElementById('diasUteis').value = diasUteis - qtdExtras - feriadosNacionais;
-        document.getElementById('domFeriados').value = domingos + qtdExtras + feriadosNacionais;
+        feriadosFixos.forEach(fix => { const [dia, mesFix] = fix.split('/'); if (parseInt(mesFix) === mes) { const dt = new Date(ano, mes - 1, parseInt(dia)); if (dt.getDay() !== 0) feriadosNacionais++; } });
+        const extrasStr = document.getElementById('feriadosExtras').value; const qtdExtras = extrasStr ? extrasStr.split(',').length : 0;
+        document.getElementById('diasUteis').value = diasUteis - qtdExtras - feriadosNacionais; document.getElementById('domFeriados').value = domingos + qtdExtras + feriadosNacionais;
         if(document.querySelector('input[name="tipoDias"]:checked')?.value !== 'completo') atualizarFerias();
     }
 
     document.getElementById('btn-calcular').addEventListener('click', performCalc);
     document.getElementById('btn-voltar').addEventListener('click', () => { document.getElementById('result-view').classList.add('hidden'); document.getElementById('form-view').classList.remove('hidden'); });
-    document.getElementById('btn-pdf').addEventListener('click', () => {
-        const opt = { margin: 10, filename: 'holerite.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } };
-        html2pdf().set(opt).from(document.getElementById('resultado-container')).save();
-    });
-
+    document.getElementById('btn-pdf').addEventListener('click', () => { const opt = { margin: 10, filename: 'holerite.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }; html2pdf().set(opt).from(document.getElementById('resultado-container')).save(); });
     document.querySelectorAll('input[name="tipoDias"]').forEach(r => r.addEventListener('change', atualizarFerias));
-    inicioFeriasInput.addEventListener('change', atualizarFerias);
-    qtdDiasFeriasInput.addEventListener('input', atualizarFerias);
-    mesReferenciaInput.addEventListener('change', preencherDiasMes);
-
-    document.getElementById('btn-add-feriado').addEventListener('click', () => {
-        const dia = document.getElementById('diaFeriado').value;
-        if(dia) {
-            const div = document.createElement('div');
-            div.className = 'feriado-box'; div.textContent = `Dia ${dia}`;
-            div.onclick = () => { 
-                const nova = document.getElementById('feriadosExtras').value.split(',').filter(d => !d.endsWith(dia)).join(',');
-                document.getElementById('feriadosExtras').value = nova; div.remove(); preencherDiasMes(); 
-            };
-            document.getElementById('listaFeriados').appendChild(div);
-            const current = document.getElementById('feriadosExtras').value;
-            const fullDate = `${dia.padStart(2, '0')}/${mesReferenciaInput.value.split('-')[1]}`;
-            document.getElementById('feriadosExtras').value = current ? current + ',' + fullDate : fullDate;
-            preencherDiasMes();
-        }
-    });
-    document.getElementById('btn-limpar-feriados').addEventListener('click', () => {
-        document.getElementById('feriadosExtras').value = ''; document.getElementById('listaFeriados').innerHTML = ''; preencherDiasMes();
-    });
-
-    document.querySelectorAll('.hora-conversivel').forEach(c => {
-        c.addEventListener('blur', function() {
-            let v = this.value.replace(',', '.').replace(':', '.'); if(v) this.value = parseFloat(v).toFixed(2);
-        });
-    });
-
+    inicioFeriasInput.addEventListener('change', atualizarFerias); qtdDiasFeriasInput.addEventListener('input', atualizarFerias); mesReferenciaInput.addEventListener('change', preencherDiasMes);
+    document.getElementById('btn-add-feriado').addEventListener('click', () => { const dia = document.getElementById('diaFeriado').value; if(dia) { const div = document.createElement('div'); div.className = 'feriado-box'; div.textContent = `Dia ${dia}`; div.onclick = () => { const nova = document.getElementById('feriadosExtras').value.split(',').filter(d => !d.endsWith(dia)).join(','); document.getElementById('feriadosExtras').value = nova; div.remove(); preencherDiasMes(); }; document.getElementById('listaFeriados').appendChild(div); const current = document.getElementById('feriadosExtras').value; const fullDate = `${dia.padStart(2, '0')}/${mesReferenciaInput.value.split('-')[1]}`; document.getElementById('feriadosExtras').value = current ? current + ',' + fullDate : fullDate; preencherDiasMes(); } });
+    document.getElementById('btn-limpar-feriados').addEventListener('click', () => { document.getElementById('feriadosExtras').value = ''; document.getElementById('listaFeriados').innerHTML = ''; preencherDiasMes(); });
+    document.querySelectorAll('.hora-conversivel').forEach(c => { c.addEventListener('blur', function() { let v = this.value.replace(',', '.').replace(':', '.'); if(v) this.value = parseFloat(v).toFixed(2); }); });
     preencherDiasMes();
 });
-
-
