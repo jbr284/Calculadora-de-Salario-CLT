@@ -1,7 +1,7 @@
 // sw.js - Service Worker com Atualização Automática Forçada
 
 // Mude este nome sempre que quiser forçar uma atualização para todos os usuários
-const CACHE_NAME = 'calc-salario-v2';
+const CACHE_NAME = 'calc-salario-v3';
 
 // Lista de arquivos para salvar localmente (funcionar offline)
 const ASSETS_TO_CACHE = [
@@ -65,3 +65,4 @@ self.addEventListener('fetch', (event) => {
   );
 
 });
+
