@@ -1,4 +1,4 @@
-// app.js - VERSÃO FINAL (DSR CORRIGIDO: APENAS SOBRE A VARIÁVEL)
+// app.js - VERSÃO FINAL (ONBOARDING GUIADO + INSTRUÇÕES CLARAS)
 
 // --- 1. REGRAS FIXAS (LEI 2026 - INSS da Imagem) ---
 const regrasFederais = {
@@ -70,7 +70,7 @@ function showToast(msg) {
     if(toast) {
         toast.textContent = msg;
         toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 3000);
+        setTimeout(() => toast.classList.add('hidden'), 4000); // Aumentei o tempo para leitura
     } else {
         alert(msg);
     }
@@ -93,7 +93,6 @@ function calcularSalario(inputs, perfil) {
     // --- PROVENTOS ---
     const vencBase = round2(valorDia * diasEfetivos);
     
-    // Horas Extras
     const valorHE50 = round2(he50 * valorHora * 1.5);
     const valorHE60 = round2(he60 * valorHora * 1.6);
     const valorHE80 = round2(he80 * valorHora * 1.8);
@@ -101,20 +100,13 @@ function calcularSalario(inputs, perfil) {
     const valorHE150 = round2(he150 * valorHora * 2.5);
     const totalHE = valorHE50 + valorHE60 + valorHE80 + valorHE100 + valorHE150;
 
-    // Adicional Noturno (Valor puro do adicional)
-    // Ex: Se hora = 10 e add = 20%, ValorNoturno = 2
     const percNoturno = cfg.noturno / 100;
     const valorNoturno = round2(noturno * valorHora * percNoturno);
 
     // --- DSRs ---
     const dsrHE = round2((totalHE / diasUteis) * domFeriados);
-
-    // DSR NOTURNO (CORRIGIDO: Apenas sobre o valor do Adicional)
-    // Fórmula Imagem Nova: [Total Hr * (Sal/220) * %] / Dias Úteis * DSR
-    // Onde [Total Hr * (Sal/220) * %] é exatamente a variável 'valorNoturno' calculada acima.
     const dsrNoturno = round2((valorNoturno / diasUteis) * domFeriados);
     
-    // Total Bruto
     const totalBruto = vencBase + totalHE + valorNoturno + dsrHE + dsrNoturno;
 
     // --- DESCONTOS ---
@@ -138,7 +130,7 @@ function calcularSalario(inputs, perfil) {
         });
     }
 
-    // INSS (Tabela Fixa da Imagem)
+    // INSS
     let baseINSS = totalBruto;
     if (baseINSS > regrasFederais.tetoINSS) baseINSS = regrasFederais.tetoINSS;
     let inss = 0;
@@ -197,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         perfilAtual.config.descontosExtras.forEach((item, index) => {
             const row = document.createElement('div');
             row.style.cssText = "display:flex; gap:10px; margin-bottom:10px; align-items:center;";
-            const inputNome = document.createElement('input'); inputNome.type = 'text'; inputNome.value = item.nome; inputNome.placeholder = 'Nome'; inputNome.style.flex = "2"; inputNome.onchange = (e) => { item.nome = e.target.value; };
+            const inputNome = document.createElement('input'); inputNome.type = 'text'; inputNome.value = item.nome; inputNome.placeholder = 'Nome (Ex: VT)'; inputNome.style.flex = "2"; inputNome.onchange = (e) => { item.nome = e.target.value; };
             const inputValor = document.createElement('input'); inputValor.type = 'number'; inputValor.value = item.valor; inputValor.placeholder = 'Valor'; inputValor.style.flex = "1"; inputValor.onchange = (e) => { item.valor = parseFloat(e.target.value) || 0; };
             const selTipo = document.createElement('select'); selTipo.innerHTML = `<option value="$">R$</option><option value="%">%</option>`; selTipo.value = item.tipo; selTipo.style.width = '65px'; selTipo.onchange = (e) => { item.tipo = e.target.value; };
             const btnDel = document.createElement('button'); btnDel.innerHTML = '&times;'; btnDel.className = 'btn-sm'; btnDel.style.background = '#c62828'; btnDel.onclick = () => { perfilAtual.config.descontosExtras.splice(index, 1); renderConfigList(); };
@@ -218,8 +210,63 @@ document.addEventListener('DOMContentLoaded', () => {
         html += '</table>'; container.innerHTML = html;
     }
 
+    // INIT UI
     document.getElementById('nome-empresa-display').textContent = perfilAtual.nomeEmpresa;
     atualizarPreviewFixos();
+
+    // --- FUNÇÃO AUXILIAR PARA GUIAR O USUÁRIO ---
+    function abrirModalEGuiarParaDescontos(msg) {
+        // Preenche dados
+        document.getElementById('cfg_nome_empresa').value = perfilAtual.nomeEmpresa;
+        document.getElementById('cfg_perc_adiantamento').value = perfilAtual.config.adiantamento || 40;
+        document.getElementById('cfg_perc_noturno').value = perfilAtual.config.noturno;
+        renderConfigList();
+        
+        // Abre modal
+        const modalConfig = document.getElementById('modal-config');
+        modalConfig.classList.remove('hidden');
+        
+        // DESTACA A ÁREA DE DESCONTOS (UX "FORÇADA")
+        const containerLista = document.getElementById('container-lista-config');
+        const btnAdd = document.getElementById('btn-add-novo-desconto');
+        
+        // Adiciona classe de animação (precisa estar no CSS)
+        containerLista.parentElement.classList.add('highlight-section');
+        setTimeout(() => containerLista.parentElement.classList.remove('highlight-section'), 5000);
+        
+        // Scroll para o botão de adicionar
+        btnAdd.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Mostra a mensagem instrucional
+        showToast(msg);
+    }
+
+    // --- LÓGICA DE ONBOARDING (PRIMEIRA VEZ) ---
+    const isSetupDone = localStorage.getItem('calc_setup_done');
+    const modalWelcome = document.getElementById('modal-welcome');
+    const chkAdiantamento = document.getElementById('chk_adiantamento');
+
+    if (!isSetupDone && modalWelcome) {
+        modalWelcome.classList.remove('hidden');
+
+        document.getElementById('btn-welcome-sim').onclick = () => {
+            if(chkAdiantamento) chkAdiantamento.checked = true;
+            perfilAtual.config.adiantamento = 40; 
+            modalWelcome.classList.add('hidden');
+            
+            // GUIA: Ativou o vale, agora pede os outros
+            abrirModalEGuiarParaDescontos("✅ Vale Ativado! AGORA cadastre outros descontos (VT, Saúde...) abaixo 👇");
+        };
+
+        document.getElementById('btn-welcome-nao').onclick = () => {
+            if(chkAdiantamento) chkAdiantamento.checked = false;
+            // Mantém valor padrão 40 na config caso ative futuramente, mas desmarca checkbox
+            modalWelcome.classList.add('hidden');
+            
+            // GUIA: Sem vale, mas pede os outros
+            abrirModalEGuiarParaDescontos("👇 Adicione seus descontos fixos (VT, Convênio, etc) aqui.");
+        };
+    }
 
     const selDias = document.getElementById('inicioFerias');
     const selFeriados = document.getElementById('diaFeriado');
@@ -234,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('btn-close-modal').onclick = () => modal.classList.add('hidden');
     
-    // BOTÃO ADD CORRIGIDO
     const btnAddDesconto = document.getElementById('btn-add-novo-desconto');
     if(btnAddDesconto){
         btnAddDesconto.onclick = () => { perfilAtual.config.descontosExtras.push({ id: Date.now(), nome: "", valor: 0, tipo: "$" }); renderConfigList(); };
@@ -246,8 +292,13 @@ document.addEventListener('DOMContentLoaded', () => {
         perfilAtual.config.noturno = parseFloat(document.getElementById('cfg_perc_noturno').value) || 0;
         perfilAtual.config.descontosExtras = perfilAtual.config.descontosExtras.filter(i => i.nome.trim() !== "");
         Store.salvarPerfil(perfilAtual);
+        
+        localStorage.setItem('calc_setup_done', 'true');
+
         document.getElementById('nome-empresa-display').textContent = perfilAtual.nomeEmpresa;
-        atualizarPreviewFixos(); showToast('Configurações Salvas!'); modal.classList.add('hidden');
+        atualizarPreviewFixos(); 
+        showToast('Configurações Salvas!'); 
+        modal.classList.add('hidden');
     };
 
     function getSafeVal(id) { const el = document.getElementById(id); return el ? el.value : ""; }
