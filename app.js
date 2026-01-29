@@ -1,6 +1,6 @@
 // app.js - VERSÃO FINAL (CAMPOS VAZIOS + ONBOARDING)
 
-// --- 1. REGRAS FIXAS (LEI 2026 - INSS da Imagem) ---
+// --- 1. REGRAS FIXAS (LEI 2026) ---
 const regrasFederais = {
     ano: 2026,
     salarioMinimo: 1621.00,
@@ -24,18 +24,26 @@ const regrasFederais = {
     ]
 };
 
-// --- 2. PERFIL (AGORA VAZIO POR PADRÃO) ---
+// --- 2. PERFIL (ESTRITAMENTE VAZIO) ---
 const perfilPadrao = {
-    nomeEmpresa: "", // Vazio
+    nomeEmpresa: "", 
     config: {
-        adiantamento: "",   // Vazio
-        noturno: "",        // Vazio
+        adiantamento: "",   
+        noturno: "",        
         descontosExtras: [] 
     }
 };
 
 const Store = {
     getPerfil() {
+        // RESET FORÇADO PARA LIMPAR DADOS ANTIGOS (V3)
+        // Isso garante que seus testes anteriores com "40" e "20" sejam apagados.
+        if (!localStorage.getItem('calc_reset_v3')) {
+            localStorage.removeItem('calc_perfil_empresa_flex');
+            localStorage.removeItem('calc_setup_done');
+            localStorage.setItem('calc_reset_v3', 'true');
+        }
+
         const dados = localStorage.getItem('calc_perfil_empresa_flex');
         if (!dados) return JSON.parse(JSON.stringify(perfilPadrao));
         return JSON.parse(dados);
@@ -86,7 +94,6 @@ function calcularSalario(inputs, perfil) {
     const cfg = perfil.config;
     const diasEfetivos = (!diasTrab || diasTrab === 0) ? 30 : diasTrab;
     
-    // Valores Unitários
     const valorDia = round2(salario / 30);
     const valorHora = round2(salario / 220);
 
@@ -100,12 +107,10 @@ function calcularSalario(inputs, perfil) {
     const valorHE150 = round2(he150 * valorHora * 2.5);
     const totalHE = valorHE50 + valorHE60 + valorHE80 + valorHE100 + valorHE150;
 
-    // Tratamento de Vazio para Zero
     const percNoturnoConfig = parseFloat(cfg.noturno) || 0;
     const percNoturno = percNoturnoConfig / 100;
     const valorNoturno = round2(noturno * valorHora * percNoturno);
 
-    // --- DSRs ---
     const dsrHE = round2((totalHE / diasUteis) * domFeriados);
     const dsrNoturno = round2((valorNoturno / diasUteis) * domFeriados);
     
@@ -116,7 +121,6 @@ function calcularSalario(inputs, perfil) {
     const descFaltas = round2(faltas * valorDia);
     const descAtrasos = round2(atrasos * valorHora);
     
-    // Tratamento de Vazio para Zero
     const percAdiantamento = parseFloat(cfg.adiantamento) || 0;
     const adiantamento = options.adiantamento ? round2((salario / 30) * diasEfetivos * (percAdiantamento / 100)) : 0;
     
@@ -135,7 +139,6 @@ function calcularSalario(inputs, perfil) {
         });
     }
 
-    // INSS
     let baseINSS = totalBruto;
     if (baseINSS > regrasFederais.tetoINSS) baseINSS = regrasFederais.tetoINSS;
     let inss = 0;
@@ -150,7 +153,6 @@ function calcularSalario(inputs, perfil) {
         inss = round2((baseINSS * ult.aliq) - ult.ded);
     }
 
-    // IRRF 2026
     const deducoesLegais = inss + (dependentes * regrasFederais.deducaoDependente);
     const deducaoUtilizada = Math.max(deducoesLegais, regrasFederais.descontoSimplificadoValor);
     const baseIRRF = totalBruto - deducaoUtilizada;
@@ -222,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÃO AUXILIAR PARA GUIAR O USUÁRIO ---
     function abrirModalEGuiarParaDescontos(msg) {
         document.getElementById('cfg_nome_empresa').value = perfilAtual.nomeEmpresa;
-        // Se adiantamento estiver vazio/0 mas o usuário disse SIM, define 40. Se disse NÃO, deixa como está (vazio/0).
+        // GARANTE QUE NÃO PREENCHA NADA AUTOMÁTICO
         document.getElementById('cfg_perc_adiantamento').value = perfilAtual.config.adiantamento;
         document.getElementById('cfg_perc_noturno').value = perfilAtual.config.noturno;
         renderConfigList();
@@ -250,14 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-welcome-sim').onclick = () => {
             if(chkAdiantamento) chkAdiantamento.checked = true;
-            perfilAtual.config.adiantamento = 40; // Se disse SIM, sugiro 40%
+            // NÃO DEFINE VALOR PADRÃO (FICA VAZIO)
             modalWelcome.classList.add('hidden');
             abrirModalEGuiarParaDescontos("✅ Vale Ativado! AGORA cadastre outros descontos (VT, Saúde...) abaixo 👇");
         };
 
         document.getElementById('btn-welcome-nao').onclick = () => {
             if(chkAdiantamento) chkAdiantamento.checked = false;
-            // Se disse NÃO, mantenho vazio
             modalWelcome.classList.add('hidden');
             abrirModalEGuiarParaDescontos("👇 Adicione seus descontos fixos (VT, Convênio, etc) aqui.");
         };
@@ -283,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-save-config').onclick = () => {
         perfilAtual.nomeEmpresa = document.getElementById('cfg_nome_empresa').value || "";
-        // Aceita vazio se o usuário apagar
+        
         const adiantamentoVal = document.getElementById('cfg_perc_adiantamento').value;
         perfilAtual.config.adiantamento = adiantamentoVal === "" ? "" : parseFloat(adiantamentoVal);
         
