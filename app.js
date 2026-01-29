@@ -1,4 +1,4 @@
-// app.js - VERSÃO FINAL (ONBOARDING GUIADO + INSTRUÇÕES CLARAS)
+// app.js - VERSÃO FINAL (CAMPOS VAZIOS + ONBOARDING)
 
 // --- 1. REGRAS FIXAS (LEI 2026 - INSS da Imagem) ---
 const regrasFederais = {
@@ -24,12 +24,12 @@ const regrasFederais = {
     ]
 };
 
-// --- 2. PERFIL ---
+// --- 2. PERFIL (AGORA VAZIO POR PADRÃO) ---
 const perfilPadrao = {
-    nomeEmpresa: "",
+    nomeEmpresa: "", // Vazio
     config: {
-        adiantamento: ,   
-        noturno: ,        
+        adiantamento: "",   // Vazio
+        noturno: "",        // Vazio
         descontosExtras: [] 
     }
 };
@@ -70,7 +70,7 @@ function showToast(msg) {
     if(toast) {
         toast.textContent = msg;
         toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 4000); // Aumentei o tempo para leitura
+        setTimeout(() => toast.classList.add('hidden'), 4000); 
     } else {
         alert(msg);
     }
@@ -100,7 +100,9 @@ function calcularSalario(inputs, perfil) {
     const valorHE150 = round2(he150 * valorHora * 2.5);
     const totalHE = valorHE50 + valorHE60 + valorHE80 + valorHE100 + valorHE150;
 
-    const percNoturno = cfg.noturno / 100;
+    // Tratamento de Vazio para Zero
+    const percNoturnoConfig = parseFloat(cfg.noturno) || 0;
+    const percNoturno = percNoturnoConfig / 100;
     const valorNoturno = round2(noturno * valorHora * percNoturno);
 
     // --- DSRs ---
@@ -113,7 +115,10 @@ function calcularSalario(inputs, perfil) {
     const fgts = round2(totalBruto * 0.08);
     const descFaltas = round2(faltas * valorDia);
     const descAtrasos = round2(atrasos * valorHora);
-    const adiantamento = options.adiantamento ? round2((salario / 30) * diasEfetivos * (cfg.adiantamento / 100)) : 0;
+    
+    // Tratamento de Vazio para Zero
+    const percAdiantamento = parseFloat(cfg.adiantamento) || 0;
+    const adiantamento = options.adiantamento ? round2((salario / 30) * diasEfetivos * (percAdiantamento / 100)) : 0;
     
     let somaExtras = 0;
     const listaExtrasCalculados = [];
@@ -216,28 +221,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNÇÃO AUXILIAR PARA GUIAR O USUÁRIO ---
     function abrirModalEGuiarParaDescontos(msg) {
-        // Preenche dados
         document.getElementById('cfg_nome_empresa').value = perfilAtual.nomeEmpresa;
-        document.getElementById('cfg_perc_adiantamento').value = perfilAtual.config.adiantamento || 40;
+        // Se adiantamento estiver vazio/0 mas o usuário disse SIM, define 40. Se disse NÃO, deixa como está (vazio/0).
+        document.getElementById('cfg_perc_adiantamento').value = perfilAtual.config.adiantamento;
         document.getElementById('cfg_perc_noturno').value = perfilAtual.config.noturno;
         renderConfigList();
         
-        // Abre modal
         const modalConfig = document.getElementById('modal-config');
         modalConfig.classList.remove('hidden');
         
-        // DESTACA A ÁREA DE DESCONTOS (UX "FORÇADA")
         const containerLista = document.getElementById('container-lista-config');
-        const btnAdd = document.getElementById('btn-adic.-novo-desconto');
+        const btnAdd = document.getElementById('btn-add-novo-desconto');
         
-        // Adiciona classe de animação (precisa estar no CSS)
         containerLista.parentElement.classList.add('highlight-section');
         setTimeout(() => containerLista.parentElement.classList.remove('highlight-section'), 5000);
         
-        // Scroll para o botão de adicionar
         btnAdd.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Mostra a mensagem instrucional
         showToast(msg);
     }
 
@@ -251,19 +250,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('btn-welcome-sim').onclick = () => {
             if(chkAdiantamento) chkAdiantamento.checked = true;
-            perfilAtual.config.adiantamento = 40; 
+            perfilAtual.config.adiantamento = 40; // Se disse SIM, sugiro 40%
             modalWelcome.classList.add('hidden');
-            
-            // GUIA: Ativou o vale, agora pede os outros
             abrirModalEGuiarParaDescontos("✅ Vale Ativado! AGORA cadastre outros descontos (VT, Saúde...) abaixo 👇");
         };
 
         document.getElementById('btn-welcome-nao').onclick = () => {
             if(chkAdiantamento) chkAdiantamento.checked = false;
-            // Mantém valor padrão 40 na config caso ative futuramente, mas desmarca checkbox
+            // Se disse NÃO, mantenho vazio
             modalWelcome.classList.add('hidden');
-            
-            // GUIA: Sem vale, mas pede os outros
             abrirModalEGuiarParaDescontos("👇 Adicione seus descontos fixos (VT, Convênio, etc) aqui.");
         };
     }
@@ -281,15 +276,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('btn-close-modal').onclick = () => modal.classList.add('hidden');
     
-    const btnAddDesconto = document.getElementById('btn-adic.-novo-desconto');
+    const btnAddDesconto = document.getElementById('btn-add-novo-desconto');
     if(btnAddDesconto){
         btnAddDesconto.onclick = () => { perfilAtual.config.descontosExtras.push({ id: Date.now(), nome: "", valor: 0, tipo: "$" }); renderConfigList(); };
     }
 
     document.getElementById('btn-save-config').onclick = () => {
-        perfilAtual.nomeEmpresa = document.getElementById('cfg_nome_empresa').value || "Minha Empresa";
-        perfilAtual.config.adiantamento = parseFloat(document.getElementById('cfg_perc_adiantamento').value) || 0;
-        perfilAtual.config.noturno = parseFloat(document.getElementById('cfg_perc_noturno').value) || 0;
+        perfilAtual.nomeEmpresa = document.getElementById('cfg_nome_empresa').value || "";
+        // Aceita vazio se o usuário apagar
+        const adiantamentoVal = document.getElementById('cfg_perc_adiantamento').value;
+        perfilAtual.config.adiantamento = adiantamentoVal === "" ? "" : parseFloat(adiantamentoVal);
+        
+        const noturnoVal = document.getElementById('cfg_perc_noturno').value;
+        perfilAtual.config.noturno = noturnoVal === "" ? "" : parseFloat(noturnoVal);
+        
         perfilAtual.config.descontosExtras = perfilAtual.config.descontosExtras.filter(i => i.nome.trim() !== "");
         Store.salvarPerfil(perfilAtual);
         
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${row('HE 80%', res.p.valorHE80)}
                     ${row('HE 100%', res.p.valorHE100)}
                     ${row('HE 150%', res.p.valorHE150)}
-                    ${row(`Adic. Noturno (${perfilAtual.config.noturno}%)`, res.p.valorNoturno)}
+                    ${row(`Adic. Noturno (${perfilAtual.config.noturno || 0}%)`, res.p.valorNoturno)}
                     ${row('DSR s/ Horas Extras', res.p.dsrHE)}
                     ${row('DSR s/ Adic. Noturno', res.p.dsrNoturno)}
                     <tr class="summary-row"><td>Total Bruto</td><td class="valor">${Format.toBRL(res.p.totalBruto)}</td></tr>
@@ -415,5 +415,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.hora-conversivel').forEach(c => { c.addEventListener('blur', function() { let v = this.value.replace(',', '.').replace(':', '.'); if(v) this.value = parseFloat(v).toFixed(2); }); });
     preencherDiasMes();
 });
-
-
