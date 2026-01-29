@@ -26,10 +26,10 @@ const regrasFederais = {
 
 // --- 2. PERFIL ---
 const perfilPadrao = {
-    nomeEmpresa: "Minha Empresa",
+    nomeEmpresa: "",
     config: {
-        adiantamento: 40,   
-        noturno: 20,        
+        adiantamento: ,   
+        noturno: ,        
         descontosExtras: [] 
     }
 };
@@ -415,4 +415,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.hora-conversivel').forEach(c => { c.addEventListener('blur', function() { let v = this.value.replace(',', '.').replace(':', '.'); if(v) this.value = parseFloat(v).toFixed(2); }); });
     preencherDiasMes();
 });
+
 
