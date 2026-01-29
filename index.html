@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Calc. Salário 2026</title>
+  <title>CalcSalário 2026</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
@@ -18,16 +18,15 @@
       <div class="header-content">
           <div class="logo-area">
               <span style="font-size: 1.5rem;">💰</span>
-              <h1>Calc. Salário<span class="highlight"> - CLT</span></h1>
+              <h1>Salário<span class="highlight">Flex</span></h1>
           </div>
           <button id="btn-config" class="btn-config-header" aria-label="Configurações">
-              <span>⚙️ Configurar / Adic. Descontos</span>
+              <span>⚙️ Configurar / Add Descontos</span>
           </button>
       </div>
   </header>
 
   <main class="container">
-    
     <div id="form-view" class="view active">
         <div id="nome-empresa-display" class="company-badge"></div>
 
@@ -93,7 +92,7 @@
                             </p>
                             <div class="feriado-wrapper">
                                 <select id="diaFeriado"><option value=""></option></select>
-                                <button type="button" id="btn-add-feriado" class="btn-sm">Adic.</button>
+                                <button type="button" id="btn-add-feriado" class="btn-sm">Add</button>
                                 <button type="button" id="btn-limpar-feriados" class="btn-sm btn-outline">Limpar</button>
                             </div>
                             <div id="listaFeriados" class="tags-list"></div>
@@ -127,9 +126,9 @@
                         
                         <div class="switch-container">
                             <label class="switch-label">
-                                <span>Adiantamento Salarial (Vale)</span>
+                                <span>Adiantamento Salarial</span>
                                 <label class="switch">
-                                    <input type="checkbox" id="chk_adiantamento" checked>
+                                    <input type="checkbox" id="chk_adiantamento">
                                     <span class="slider round"></span>
                                 </label>
                             </label>
@@ -192,11 +191,32 @@
               
               <div id="container-lista-config" class="dynamic-list"></div>
 
-              <button type="button" id="btn-adic.-novo-desconto" class="btn-dashed">+ Novo Desconto</button>
+              <button type="button" id="btn-add-novo-desconto" class="btn-dashed">+ Novo Desconto</button>
           </div>
 
           <div class="modal-footer">
               <button type="button" id="btn-save-config" class="btn-primary-block">Salvar Alterações</button>
+          </div>
+      </div>
+  </div>
+
+  <div id="modal-welcome" class="modal hidden" style="z-index: 300;">
+      <div class="modal-content" style="max-width: 400px; margin-top: 15vh;">
+          <div class="modal-header">
+              <h2 style="font-size: 1.4rem;">👋 Olá!</h2>
+          </div>
+          <div class="modal-body" style="text-align: center; padding: 30px 20px;">
+              <p style="font-size: 1.1rem; color: #333; margin-bottom: 20px;">
+                  Para começar, vamos configurar seu perfil.
+              </p>
+              <p style="font-weight: bold; color: #0d47a1; font-size: 1.2rem; margin-bottom: 30px;">
+                  Você recebe Adiantamento Salarial (Vale)?
+              </p>
+              
+              <div style="display: flex; gap: 15px; justify-content: center;">
+                  <button id="btn-welcome-nao" class="btn-secondary" style="border-color: #c62828; color: #c62828;">Não recebo</button>
+                  <button id="btn-welcome-sim" class="btn-primary" style="background-color: #2e7d32;">Sim, recebo</button>
+              </div>
           </div>
       </div>
   </div>
@@ -214,9 +234,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
