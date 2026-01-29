@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // DESTACA A ÁREA DE DESCONTOS (UX "FORÇADA")
         const containerLista = document.getElementById('container-lista-config');
-        const btnAdd = document.getElementById('btn-add-novo-desconto');
+        const btnAdd = document.getElementById('btn-adic.-novo-desconto');
         
         // Adiciona classe de animação (precisa estar no CSS)
         containerLista.parentElement.classList.add('highlight-section');
@@ -415,3 +415,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.hora-conversivel').forEach(c => { c.addEventListener('blur', function() { let v = this.value.replace(',', '.').replace(':', '.'); if(v) this.value = parseFloat(v).toFixed(2); }); });
     preencherDiasMes();
 });
+
