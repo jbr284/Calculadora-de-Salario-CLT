@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('btn-close-modal').onclick = () => modal.classList.add('hidden');
     
-    const btnAddDesconto = document.getElementById('btn-add-novo-desconto');
+    const btnAddDesconto = document.getElementById('btn-adic.-novo-desconto');
     if(btnAddDesconto){
         btnAddDesconto.onclick = () => { perfilAtual.config.descontosExtras.push({ id: Date.now(), nome: "", valor: 0, tipo: "$" }); renderConfigList(); };
     }
